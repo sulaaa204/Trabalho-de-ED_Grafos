@@ -127,7 +127,7 @@ def menu():
             print(f"Peso total: {peso_total}")
             for i, p in enumerate(pais):
                 if p:
-                    print(f"Aresta {p}-{i + 1}")
+                    print(f"Aresta {p}-{i + 1}; peso {pesos[i]}")
 
         elif opcao == '0':
             break
