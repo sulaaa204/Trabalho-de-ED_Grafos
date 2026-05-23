@@ -69,13 +69,20 @@ def carregar_grafo(nome_arquivo, ponderado_usuario=None):
             continue
             
         partes = linha_limpa.split()
+
         if len(partes) >= 2:
             u = int(partes[0])
             v = int(partes[1])
-            if ponderado:
-                # Se for ponderado e tiver o terceiro valor, usa ele. Se não, assume peso 1.0
-                peso = float(partes[2]) if len(partes) >= 3 else 1.0
+
+            # Se a terceira coluno existir, ela é o peso. Se não, assume peso 1 para grafos ponderados.
+            if len(partes) >= 3:
+                peso = float(partes[2])
+
+                if not g.ponderado:
+                    g.ponderado = True  # Se encontramos um peso, o grafo é ponderado
+                
                 g.adicionar_aresta(u, v, peso)
+                
             else:
                 g.adicionar_aresta(u, v, 1)
     return g
