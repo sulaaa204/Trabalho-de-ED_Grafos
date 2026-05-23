@@ -111,8 +111,16 @@ def menu():
 
         elif opcao == '2':
             for i in range(1, g.num_vertices + 1):
-                vizinhos = g.obter_vizinhos(i)
-                print(f"{i}: {', '.join(map(str, vizinhos))}")
+                saida = []
+
+                for vizinhos in g.obter_vizinhos(i):
+                    if g.ponderado:
+                        peso = g.matriz[i - 1][vizinhos - 1]
+                        saida.append(f"{vizinhos}({peso})")
+                    else:
+                        saida.append(str(vizinhos))
+                    
+                print(f"{i}: {', '.join(saida)}")
 
         elif opcao == '3':
             v = int(input("Vértice raiz: "))
