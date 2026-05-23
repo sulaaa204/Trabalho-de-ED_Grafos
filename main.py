@@ -4,7 +4,7 @@ from Grafo import GrafoMatrizAdjacencia
 from algoritmo import BuscaLargura, AGMPrim
 
 
-def carregar_grafo(nome_arquivo):
+def carregar_grafo(nome_arquivo, ponderado_usuario=None):
     caminho = nome_arquivo
     if not os.path.isfile(caminho) and not caminho.lower().endswith('.txt'):
         caminho_txt = caminho + '.txt'
@@ -20,62 +20,66 @@ def carregar_grafo(nome_arquivo):
     if not linhas:
         raise ValueError("O arquivo está vazio.")
 
-    # Formato com cabeçalho: num_vertices / 0|1 / arestas...
+    # Formato com cabeçalho:
+    # - primeira linha: num_vertices [0(sem peso)|1(com peso)]
+    # - segunda linha (opcional): 0|1 se o cabeçalho for curto.
     header_possible = False
-    if len(linhas) >= 2:
-        try:
-            num_vertices = int(linhas[0])
-            ponderado = int(linhas[1]) == 1
-            header_possible = True
-        except ValueError:
-            header_possible = False
-
-    if header_possible:
-        edges = linhas[2:]
-        if not edges:
-            raise ValueError("Arquivo com cabeçalho deve conter arestas após a segunda linha.")
-    else:
-        edges = linhas
-        linha_partes = [linha.split() for linha in edges]
-        if all(len(partes) == 2 for partes in linha_partes):
-            ponderado = False
-        elif all(len(partes) == 3 for partes in linha_partes):
-            ponderado = True
-        else:
-            raise ValueError(
-                "Formato inválido. Use um arquivo com cabeçalho:\n"
-                "1ª linha: número de vértices\n"
-                "2ª linha: 0 ou 1\n"
-                "ou apenas linhas de arestas: u v (não ponderado) ou u v peso (ponderado)"
-            )
-
-        max_vert = 0
-        for partes in linha_partes:
+    if len(linhas) >= 1:
+        first_tokens = linhas[0].split()
+        if len(first_tokens) >= 2:
             try:
-                u, v = map(int, partes[:2])
+                num_vertices = int(first_tokens[0])
+                if ponderado_usuario is None:
+                    ponderado = int(first_tokens[1]) == 1
+                else:
+                    ponderado = ponderado_usuario
+                header_possible = True
+                edges = linhas[1:]
             except ValueError:
-                raise ValueError("Todas as arestas devem conter números inteiros.")
-            max_vert = max(max_vert, u, v)
+                header_possible = False
+        elif len(linhas) >= 2:
+            try:
+                num_vertices = int(linhas[0])
+                second_tokens = linhas[1].split()
+                if len(second_tokens) == 1 and second_tokens[0] in {'0', '1'}:
+                    if ponderado_usuario is None:
+                        ponderado = int(second_tokens[0]) == 1
+                    else:
+                        ponderado = ponderado_usuario
+                    header_possible = True
+                    edges = linhas[2:]
+                else:
+                    header_possible = False
+            except ValueError:
+                header_possible = False
 
-        if max_vert == 0:
-            raise ValueError("Não foi possível inferir o número de vértices.")
-
-        num_vertices = max_vert
+    if not header_possible:
+        # Se o arquivo não tem cabeçalho de 2 linhas, a primeira linha pode ser apenas o número de vértices,
+        # ou pode não ter cabeçalho nenhum. Tentamos inferir o formato pelas linhas de arestas.
+        num_vertices = int(linhas[0].split()[0])
+        ponderado = ponderado if ponderado is not None else False
+        edges = linhas[1:]
 
     g = GrafoMatrizAdjacencia(num_vertices, ponderado)
-    for indice, linha in enumerate(edges, start=(3 if header_possible else 1)):
-        partes = linha.split()
-        if ponderado:
-            if len(partes) != 3:
-                raise ValueError(f"Linha {indice}: esperam-se 3 valores (u v peso).")
-            u, v, peso = map(int, partes)
-            g.adicionar_aresta(u, v, peso)
-        else:
-            if len(partes) != 2:
-                raise ValueError(f"Linha {indice}: esperam-se 2 valores (u v).")
-            u, v = map(int, partes)
-            g.adicionar_aresta(u, v)
+    
+    for linha in edges:
+        # Remove comentários se houverem no arquivo (ex: #aresta entre 1 e 2)
+        linha_limpa = linha.split('#')[0].strip()
+        if not linha_limpa:
+            continue
+            
+        partes = linha_limpa.split()
+        if len(partes) >= 2:
+            u = int(partes[0])
+            v = int(partes[1])
+            if ponderado:
+                # Se for ponderado e tiver o terceiro valor, usa ele. Se não, assume peso 1.0
+                peso = float(partes[2]) if len(partes) >= 3 else 1.0
+                g.adicionar_aresta(u, v, peso)
+            else:
+                g.adicionar_aresta(u, v, 1)
     return g
+
 
 
 def menu():
